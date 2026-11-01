@@ -11,7 +11,8 @@ public enum PropertyValue {
 	mapReveal(false),
 	concealedSlotsReveal(false),
 	allStickersUnlocked(false),
-	
+	combatEngineV2(false), // Debug: use the experimental combat engine (game.combat.v2) for newly-started fights
+
 	enchantmentLimits(true),
 	levelDrain(true),
 	

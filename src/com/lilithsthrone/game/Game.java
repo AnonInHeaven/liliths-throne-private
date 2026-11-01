@@ -5981,6 +5981,13 @@ public class Game implements XMLSaving {
 		return Main.getProperties().hasValue(PropertyValue.concealedSlotsReveal);
 	}
 
+	/**
+	 * @return true if newly-started fights should use the experimental combat engine (CombatEngineV2). Debug toggle.
+	 */
+	public boolean isCombatEngineV2() {
+		return Main.getProperties().hasValue(PropertyValue.combatEngineV2);
+	}
+
 	public boolean isEnchantmentCapacityEnabled() {
 		return Main.getProperties().hasValue(PropertyValue.enchantmentLimits);
 	}

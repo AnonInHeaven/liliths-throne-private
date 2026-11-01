@@ -24,6 +24,7 @@ import com.lilithsthrone.game.combat.moves.CombatMove;
 import com.lilithsthrone.game.combat.moves.CombatMoveType;
 import com.lilithsthrone.game.combat.spells.Spell;
 import com.lilithsthrone.game.combat.spells.SpellUpgrade;
+import com.lilithsthrone.game.combat.v2.CombatEngineV2;
 import com.lilithsthrone.game.dialogue.DialogueFlagValue;
 import com.lilithsthrone.game.dialogue.DialogueNode;
 import com.lilithsthrone.game.dialogue.DialogueNodeType;
@@ -92,9 +93,24 @@ public class Combat {
 	// Used if the ResponseCombat which initialises combat came from an external dialogue file:
 	private DialogueNode playerPostVictoryDialogue;
 	private DialogueNode playerPostDefeatDialogue;
-	
-	
+
+	// The rules engine for the current (or most recent) fight. Defaults to legacy so that calls made outside of combat (e.g. isCombatantDefeated()) behave as before.
+	private CombatEngine engine;
+
+
 	public Combat() {
+		engine = new LegacyCombatEngine(this);
+	}
+
+	private CombatEngine createEngine() {
+		if(Main.game!=null && Main.game.isCombatEngineV2()) {
+			return new CombatEngineV2(this);
+		}
+		return new LegacyCombatEngine(this);
+	}
+
+	public CombatEngine getEngine() {
+		return engine;
 	}
 
 	public void initialiseCombat(
@@ -126,7 +142,10 @@ public class Combat {
 			Map<GameCharacter, String> openingDescriptions,
 			boolean escapeBlocked,
 			boolean submitBlocked) {
-		
+
+		// The engine is fixed for the duration of a fight:
+		engine = createEngine();
+
 		// These should be set manually after initialising combat
 		playerPostVictoryDialogue = null;
 		playerPostDefeatDialogue = null;
@@ -294,7 +313,14 @@ public class Combat {
 			
 			combatContent.get(combatant).add(startingEffect);
 		}
-		
+
+		engine.onCombatInitialised();
+	}
+
+	/**
+	 * Legacy engine: marks the game as in combat, sets up AP/shields/cooldowns, and has NPCs select their first moves.
+	 */
+	void prepareFirstTurnLegacy() {
 		Main.game.getPlayer().calculateStatusEffects(0); // Calculate status effects to make sure combat SEs are initialised before selecting moves
 		Main.game.getPlayer().resetSelectedMoves();
 		Main.game.getPlayer().resetMoveCooldowns();
@@ -630,6 +656,8 @@ public class Combat {
 		}
 		
 		Main.game.getTextStartStringBuilder().append(postCombatStringBuilder.toString());
+
+		engine.onCombatEnded(playerVictory);
 	}
 
 	private String npcStatus() {
@@ -638,11 +666,11 @@ public class Combat {
 
 	// DIALOGUES:
 	public DialogueNode startCombat() {
-		return ENEMY_ATTACK;
+		return engine.getCombatNode();
 	}
-	
+
 	public boolean isCombatantDefeated(GameCharacter character) {
-		return (character.getHealth() <= 0 || (character.getLust()>=100 && character.isVulnerableToLustLoss()));
+		return engine.isCombatantDefeated(character);
 	}
 	
 	public boolean isOpponent(GameCharacter character, GameCharacter target) {
@@ -1555,6 +1583,13 @@ public class Combat {
 	}
 	
 	public void endCombatTurn() {
+		engine.endCombatTurn();
+	}
+
+	/**
+	 * Legacy engine turn resolution: all queued moves resolve in DEFEND -> SPELL -> ATTACK order, then shields/AP are refreshed and NPCs select new moves.
+	 */
+	void endCombatTurnLegacy() {
 		combatTurnResolutionStringBuilder.setLength(0);
 		
 		List<GameCharacter> combatants = getAllCombatants(true); // To avoid concurrent modification when the 'summon elemental' spell adds combatants.
@@ -1782,7 +1817,9 @@ public class Combat {
 	
 	private String getCombatContent() {
 		StringBuilder sb = new StringBuilder();
-		
+
+		sb.append(engine.getCombatContentPrefix());
+
 		sb.append("<div class='container-full-width' style='text-align:center; box-sizing: border-box; border:6px solid "+PresetColour.BASE_WHITE.toWebHexString()+"; border-radius:5px;'>");
 
 			sb.append("<div class='container-full-width' style='margin:2px; padding:4px; width:100%; border-radius:5px; text-align:center;'><b>Planning</b></div>");

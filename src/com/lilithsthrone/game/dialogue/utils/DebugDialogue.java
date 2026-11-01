@@ -356,7 +356,23 @@ public class DebugDialogue {
 							}
 						};
 					}
-					
+
+				} else if(index==17) {
+					return new Response("Combat engine: ",
+							"Toggle between the legacy combat engine and the experimental redesigned engine (work in progress). Takes effect from the next fight that starts.",
+							DEBUG_MENU){
+						@Override
+						public String getTitle() {
+							return "Combat engine: "+(Main.game.isCombatEngineV2()?"[style.colourArcane(v2)]":"[style.colourDisabled(Legacy)]");
+						}
+
+						@Override
+						public void effects() {
+							Main.getProperties().setValue(PropertyValue.combatEngineV2, !Main.game.isCombatEngineV2());
+							Main.getProperties().savePropertiesAsXML();
+						}
+					};
+
 				} else if(index==25) {
 					return new Response("Enchanted clothing", "View a list of all of the randomly-enchanted clothing which can spawn.", RANDOM_ENCHANTMENT_CLOTHING);
 					
